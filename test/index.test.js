@@ -1,25 +1,8 @@
-import retarget from '../src/index'
+import retarget from '../src/index';
 
 test('basic', () => {
-  const selector = retarget`profile.name.last`
+  const selector = retarget.profile.name.last;
 
-  // function reducer(state, action) {
-  //   const lastNameSelector = selector(state);
-  //   // getting the value is handy in components and mapStateToProps
-  //   let currentVal = lastNameSelector.get();
-
-  //   // But I think its more handy for setting
-  //   lastNameSelector.set(action.payload);
-
-  //   // if it was an array value
-  //   lastNameSelector.push("foo");
-  //   let someIndex = action.payload;
-  //   lastNameSelector.remove(someIndex);
-
-  //   return lastNameSelector.save();
-  // }
-
-  const arraySelector = retarget(['profile', 'name', 'first'])
   const STATE = {
     profile: {
       name: {
@@ -27,11 +10,10 @@ test('basic', () => {
         last: 'Jennings'
       }
     }
-  }
+  };
 
-  expect(selector(STATE)).toMatchSnapshot()
-  expect(arraySelector(STATE)).toMatchSnapshot()
-})
+  expect(selector(STATE)).toMatchSnapshot();
+});
 
 test('nested', () => {
   const STATE2 = {
@@ -53,12 +35,12 @@ test('nested', () => {
         }
       }
     }
-  }
+  };
 
-  const userSelector = retarget`users`
-  const selector2 = retarget`${userSelector}.2.profile.name.last`
-  expect(selector2(STATE2)).toMatchSnapshot()
-})
+  const userSelector = retarget.users;
+  const selector2 = userSelector[2].profile.name.last;
+  expect(selector2(STATE2)).toMatchSnapshot();
+});
 
 test('fun fun functions', () => {
   const STATE = {
@@ -72,16 +54,16 @@ test('fun fun functions', () => {
         }
       }
     }
-  }
+  };
 
-  const lastNameSelector = retarget`profile.name.last`
+  const lastNameSelector = retarget.profile.name.last;
 
-  const createUserSelector = id => retarget`users.${id}${lastNameSelector}`
+  const createUserSelector = id => retarget.users[id][lastNameSelector];
 
-  const userSelector = createUserSelector(1)
+  const userSelector = createUserSelector(1);
 
-  expect(userSelector(STATE)).toMatchSnapshot()
-})
+  expect(userSelector(STATE)).toMatchSnapshot();
+});
 
 test('compound', () => {
   const STATE3 = {
@@ -105,7 +87,7 @@ test('compound', () => {
         }
       }
     }
-  }
+  };
   // I can't figure out how to dedupe selectors
   // If you use the 2 above one after the other you will get ['profile', 'name', 'last'] twice in the key
 
@@ -113,9 +95,23 @@ test('compound', () => {
   // looking for a match and then overwriting (left to right) from there might work
   // need to do some sort of check before doing this check as it is stupid innefficent
   // unless we know there is a hit
-  const selectorA = retarget`users.1`
-  const selectorB = retarget`profile`
-  const selectorC = retarget`first`
-  const compoundSelector = retarget`entities.${selectorA}${selectorB}.name.${selectorC}`
-  expect(compoundSelector(STATE3)).toMatchSnapshot()
-})
+  const selectorA = retarget.users[1];
+  const selectorB = retarget.profile;
+  const selectorC = retarget.first;
+  const compoundSelector =
+    retarget.entities[selectorA][selectorB].name[selectorC];
+
+  expect(compoundSelector(STATE3)).toMatchSnapshot();
+});
+
+test('debug output', () => {
+  const selectorA = retarget.users[1];
+  const selectorB = retarget.profile;
+  const selectorC = retarget.first;
+  const compoundSelector =
+    retarget.entities[selectorA][selectorB].name[selectorC];
+
+  expect(compoundSelector.toString()).toEqual(
+    'retarget.entities.users.1.profile.name.first'
+  );
+});

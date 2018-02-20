@@ -2,8 +2,6 @@
 
 exports[`basic 1`] = `"Jennings"`;
 
-exports[`basic 2`] = `"Waylon"`;
-
 exports[`compound 1`] = `"Waylon"`;
 
 exports[`fun fun functions 1`] = `"Jennings"`;

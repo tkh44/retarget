@@ -1,97 +1,62 @@
-// END GOAL:
-// const selector = select`profile.name.last`;
+import 'setimmediate';
 
-// function reducer(state, action) {
-//   const lastNameSelector = selector(state);
-//   // getting the value is handy in components and mapStateToProps
-//   let currentVal = lastNameSelector.get();
+// Used to transfer object from a `toPrimitive` call
+// to the recieving retarget
+let transfer;
 
-//   // But I think its more handy for setting
-//   lastNameSelector.set(action.payload);
+const removeTransferOnNextTick = () => {
+  setImmediate(() => {
+    transfer = undefined;
+  });
+};
 
-//   // if it was an array value
-//   lastNameSelector.push("foo");
-//   let someIndex = action.payload;
-//   lastNameSelector.remove(someIndex);
+// Create an instance fn and attach
+// a path array
+const createInstance = prop => {
+  const fn = obj => fn.path.reduce((last, part) => last && last[part], obj);
+  fn.toString = () => `retarget.${fn.path.join('.')}`;
+  fn.path = [prop];
+  return fn;
+};
 
-//   return lastNameSelector.save();
-// }
-
-export default function select(strings, ...exprs) {
-  const woven = strings.raw ? interleave(strings, ...exprs) : strings
-
-  // console.log(woven)
-
-  let key = woven.filter(Boolean)
-
-  // console.log('key', key)
-
-  let INITIAL = Symbol('INITIAL')
-  let oldObj
-  let prev = INITIAL
-
-  function selectorFn(obj) {
-    // console.log('obj', obj, 'key', key)
-    // from dlv https://raw.githubusercontent.com/developit/dlv/master/index.js
-    let p = 0
-
-    if (obj == null) {
-      return obj
+// Handler for each instance
+const retargetHandler = {
+  get(target, prop, reciever) {
+    // prop will be Symbol(toPrimitive) when
+    // other handler was used like this
+    // retarget.a[retarget.b];
+    // should be the same as retarget.a.b
+    if (prop === Symbol.toPrimitive) {
+      transfer = target.path;
+      removeTransferOnNextTick();
+      return target.toString;
     }
 
-    if (oldObj === obj && prev !== INITIAL) {
-      // console.log('cache working', prev)
-      return prev
+    if (prop === 'toString') {
+      return target.toString;
     }
-    oldObj = obj
 
-    while (obj && p < key.length) {
-      let k = key[p++]
-      let val = obj[k]
-      obj = val
+    // If there is a transfer use it
+    if (transfer) {
+      target.path = target.path.concat(transfer);
+      transfer = undefined; // remove it afterwards
+    } else {
+      target.path.push(prop);
     }
-    prev = obj
-    return obj
+
+    return reciever;
+  },
+
+  apply(target, value, args) {
+    return target(args[0]);
   }
+};
 
-  selectorFn['__selector'] = function() {
-    // console.log('__selector', key)
-    return key
+// Create Retarget Instances
+const retargetCreator = {
+  get(target, prop) {
+    return new Proxy(createInstance(prop), retargetHandler);
   }
+};
 
-  function interleave(strings, ...exprs) {
-    // return strings.join()
-    return strings.reduce((accum, s, i) => {
-      // console.log(i, exprs[i]);
-      return accum.concat(
-        s.split('.'),
-        exprs[i] && handleInterpolation(exprs[i])
-      )
-    }, [])
-  }
-
-  function handleInterpolation(interpolation) {
-    if (interpolation == null) {
-      return ''
-    }
-
-    switch (typeof interpolation) {
-      case 'boolean':
-        return ''
-      case 'function':
-        if (typeof interpolation['__selector'] === 'function')
-          return interpolation['__selector']()
-
-        return handleInterpolation.call(this)
-      case 'object':
-        if (Array.isArray(interpolation)) {
-          return interpolation.map(handleInterpolation).join('.')
-        }
-        return interpolation.toString()
-      default:
-        return interpolation
-    }
-  }
-
-  return selectorFn
-}
+export default new Proxy({}, retargetCreator);
