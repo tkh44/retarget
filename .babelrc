@@ -1,0 +1,24 @@
+{
+  "presets": [
+    [
+      "env",
+      {
+        "loose": true,
+        "exclude": ["transform-es2015-typeof-symbol"]
+      }
+    ]
+  ],
+  "env": {
+    "test": {
+      "presets": [
+        [
+          "env",
+          {
+            "loose": true,
+            "exclude": ["transform-es2015-typeof-symbol"]
+          }
+        ]
+      ]
+    }
+  }
+}
