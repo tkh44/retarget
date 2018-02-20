@@ -1,6 +1,6 @@
 {
   "name": "retarget",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Create selectors for working with redux store data",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
