@@ -1,7 +1,7 @@
-import select from '../src/index'
+import retarget from '../src/index'
 
 test('basic', () => {
-  const selector = select`profile.name.last`
+  const selector = retarget`profile.name.last`
 
   // function reducer(state, action) {
   //   const lastNameSelector = selector(state);
@@ -19,7 +19,7 @@ test('basic', () => {
   //   return lastNameSelector.save();
   // }
 
-  const arraySelector = select(['profile', 'name', 'first'])
+  const arraySelector = retarget(['profile', 'name', 'first'])
   const STATE = {
     profile: {
       name: {
@@ -55,9 +55,32 @@ test('nested', () => {
     }
   }
 
-  const userSelector = select`users`
-  const selector2 = select`${userSelector}.2.profile.name.last`
+  const userSelector = retarget`users`
+  const selector2 = retarget`${userSelector}.2.profile.name.last`
   expect(selector2(STATE2)).toMatchSnapshot()
+})
+
+test('fun fun functions', () => {
+  const STATE = {
+    users: {
+      '1': {
+        profile: {
+          name: {
+            first: 'Waylon',
+            last: 'Jennings'
+          }
+        }
+      }
+    }
+  }
+
+  const lastNameSelector = retarget`profile.name.last`
+
+  const createUserSelector = id => retarget`users.${id}${lastNameSelector}`
+
+  const userSelector = createUserSelector(1)
+
+  expect(userSelector(STATE)).toMatchSnapshot()
 })
 
 test('compound', () => {
@@ -90,9 +113,9 @@ test('compound', () => {
   // looking for a match and then overwriting (left to right) from there might work
   // need to do some sort of check before doing this check as it is stupid innefficent
   // unless we know there is a hit
-  const selectorA = select`users.1`
-  const selectorB = select`profile`
-  const selectorC = select`first`
-  const compoundSelector = select`entities.${selectorA}${selectorB}.name.${selectorC}`
+  const selectorA = retarget`users.1`
+  const selectorB = retarget`profile`
+  const selectorC = retarget`first`
+  const compoundSelector = retarget`entities.${selectorA}${selectorB}.name.${selectorC}`
   expect(compoundSelector(STATE3)).toMatchSnapshot()
 })

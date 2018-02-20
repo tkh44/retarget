@@ -40,6 +40,39 @@ const lastNameSelector  = retarget`profile.name.last`
 console.log(lastNameSelector(STATE)) // logs "Jennings"
 
 ```
+
+## Composing
+
+It is possible to compose multiple selectors together to create a new one.
+
+```javascript
+import retarget from 'retarget'
+
+const STATE = {
+  users: {
+    '1': {
+      profile: {
+          name: {
+            first: 'Waylon',
+            last: 'Jennings'
+          }
+        }
+      }
+    }
+}
+
+const lastNameSelector  = retarget`profile.name.last`
+
+const createUserSelector = (id) =>
+  retarget`users.${id}${lastNameSelector}`
+
+
+const userSelector = createUserSelector(1)
+
+console.log(userSelector(STATE)) // logs "Jennings"
+
+```
+
 ## API
 
 #### retarget `function`
