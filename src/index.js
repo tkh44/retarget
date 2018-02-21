@@ -1,62 +1,63 @@
-import 'setimmediate';
+// Access the path prop from the proxy
+const PATH_PROP = Symbol('PATH');
 
-// Used to transfer object from a `toPrimitive` call
-// to the recieving retarget
-let transfer;
-
-const removeTransferOnNextTick = () => {
-  setImmediate(() => {
-    transfer = undefined;
-  });
+const toPath = prop => {
+  return prop.split('.');
 };
 
-// Create an instance fn and attach
-// a path array
-const createInstance = prop => {
-  const fn = obj => fn.path.reduce((last, part) => last && last[part], obj);
-  fn.toString = () => `retarget.${fn.path.join('.')}`;
-  fn.path = [prop];
+const createInstance = path => {
+  const fn = param => {
+    // This allows for retarget.a.b(retarget.c) => retarget.a.b.c
+    if (param && param[PATH_PROP]) {
+      return new Proxy(
+        createInstance(fn.path.concat(param[PATH_PROP])),
+        retargetHandler
+      );
+    }
+    return fn.path.reduce((last, part) => last && last[part], param);
+  };
+
+  fn.toString = () => fn.path.join('.');
+  fn.path = path;
   return fn;
 };
 
-// Handler for each instance
+// Handler for each retarget instance
 const retargetHandler = {
   get(target, prop, reciever) {
-    // prop will be Symbol(toPrimitive) when
-    // other handler was used like this
-    // retarget.a[retarget.b];
-    // should be the same as retarget.a.b
-    if (prop === Symbol.toPrimitive) {
-      transfer = target.path;
-      removeTransferOnNextTick();
+    // makes it possible to access path
+    // without preventing retarget.path.a.b
+    if (prop === PATH_PROP) {
+      return target.path;
+    }
+
+    // retarget.a.b.toString() => "a.b"
+    if (prop === 'toString' || prop === Symbol.toPrimitive) {
       return target.toString;
     }
 
-    if (prop === 'toString') {
-      return target.toString;
-    }
-
-    // If there is a transfer use it
-    if (transfer) {
-      target.path = target.path.concat(transfer);
-      transfer = undefined; // remove it afterwards
-    } else {
+    // There are two cases here
+    // 1) Prop is just a plain property access like obj.a
+    //    prop will be 'a'
+    // 2) Prop is a string path like a.b.c either because it was acces like
+    //    obj['a.b.c'] or because another retarget coercion via
+    //    obj[retarget.a.b.c]
+    //
+    if (prop.indexOf('.') === -1) {
       target.path.push(prop);
+    } else {
+      target.path = target.path.concat(toPath(prop));
     }
 
     return reciever;
-  },
-
-  apply(target, value, args) {
-    return target(args[0]);
   }
 };
 
-// Create Retarget Instances
+// Create retarget instances
 const retargetCreator = {
   get(target, prop) {
-    return new Proxy(createInstance(prop), retargetHandler);
+    return new Proxy(createInstance(toPath(prop)), retargetHandler);
   }
 };
 
-export default new Proxy({}, retargetCreator);
+export default new Proxy(createInstance([]), retargetCreator);
