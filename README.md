@@ -35,7 +35,7 @@ const STATE = {
   }
 }
 
-const lastNameSelector  = retarget`profile.name.last`
+const lastNameSelector  = retarget.profile.name.last;
 
 console.log(lastNameSelector(STATE)) // logs "Jennings"
 
@@ -61,10 +61,11 @@ const STATE = {
     }
 }
 
-const lastNameSelector  = retarget`profile.name.last`
+const lastNameSelector  = retarget.profile.name.last;
+const usersSelector = retarget.users;
 
 const createUserSelector = (id) =>
-  retarget`users.${id}${lastNameSelector}`
+  usersSelector[id][lastNameSelector]
 
 
 const userSelector = createUserSelector(1)
@@ -80,7 +81,7 @@ console.log(userSelector(STATE)) // logs "Jennings"
 ```javascript
 import retarget from 'retarget'
 
-const selector = retarget`dot.seperated.path.to.value`
+const selector = retarget.dot.seperated.path.to.value;
 
 const state = {/* Huge object */}
 selector(state) // returns the value at "dot.seperated.path.to.value"
@@ -89,7 +90,7 @@ selector(state) // returns the value at "dot.seperated.path.to.value"
 
 **Returns**
 
-`retarget` returns a function that when passed an obj, attempts to get the value for the given path.
+`retarget` will build a path of all properites that where accessed and attempts to get the value for the given path.
 
 
 
