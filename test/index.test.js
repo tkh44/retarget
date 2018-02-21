@@ -104,14 +104,33 @@ test('compound', () => {
   expect(compoundSelector(STATE3)).toMatchSnapshot();
 });
 
-test('debug output', () => {
-  const selectorA = retarget.users[1];
-  const selectorB = retarget.profile;
-  const selectorC = retarget.first;
-  const compoundSelector =
-    retarget.entities[selectorA][selectorB].name[selectorC];
+test('toPrimitiv', () => {
+  expect(retarget.a.b + '').toEqual('a.b');
+});
 
-  expect(compoundSelector.toString()).toEqual(
-    'retarget.entities.users.1.profile.name.first'
-  );
+test('toString', () => {
+  expect(retarget.a.b.toString()).toEqual('a.b');
+});
+
+test('compose with props or functions', () => {
+  const d = retarget.d;
+  const bc = retarget.b.c;
+  const abcdProp = retarget.a[bc][d];
+  expect(abcdProp.toString()).toEqual('a.b.c.d');
+
+  const abcdFunc = retarget.a(bc)(d);
+  expect(abcdFunc.toString()).toEqual(abcdProp.toString());
+});
+
+test('prop as dot path', () => {
+  expect(retarget['a.b.c'].d['e.f'].toString(), 'a.b.c.d.e.f');
+});
+
+test('identity', () => {
+  const data = {};
+  expect(retarget(data) === data).toBeTruthy();
+});
+
+test('allow `path` prop in retarget', () => {
+  expect(retarget.a.path.b.toString()).toEqual('a.path.b');
 });
