@@ -5,8 +5,45 @@ const toPath = prop => {
   return prop.split('.');
 };
 
+const handleInterpolation = interpolation => {
+  switch (typeof interpolation) {
+    case 'boolean':
+      return '';
+    case 'function':
+      if (interpolation[PATH_PROP]) {
+        return interpolation[PATH_PROP];
+      }
+      return interpolation.call(this);
+    case 'object':
+      if (Array.isArray(interpolation)) {
+        return interpolation;
+      }
+      return interpolation.toString();
+    default:
+      return interpolation;
+  }
+};
+
+const interleave = (strings, ...exprs) => {
+  return strings.reduce((accum, s, i) => {
+    return accum.concat(
+      s.split('.'),
+      exprs[i] && handleInterpolation(exprs[i])
+    );
+  }, []);
+};
+
 const createInstance = path => {
-  const fn = param => {
+  const fn = (param, ...exprs) => {
+    // Is this called like a tagged template
+    if (param && Array.isArray(param) && exprs && Array.isArray(exprs)) {
+      const woven = interleave(param, ...exprs);
+      return new Proxy(
+        createInstance(fn.path.concat(woven.filter(Boolean))),
+        retargetHandler
+      );
+    }
+
     // This allows for retarget.a.b(retarget.c) => retarget.a.b.c
     if (param && param[PATH_PROP]) {
       return new Proxy(
