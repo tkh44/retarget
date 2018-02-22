@@ -1,7 +1,7 @@
-import retarget from '../src/index';
+import retarget from '../src/index'
 
 test('first use tagged template', () => {
-  const selector = retarget`profile.name.${retarget.last}`;
+  const selector = retarget`profile.name.${retarget.last}`
 
   const STATE = {
     profile: {
@@ -10,13 +10,13 @@ test('first use tagged template', () => {
         last: 'Jennings'
       }
     }
-  };
+  }
 
-  expect(selector(STATE)).toMatchSnapshot();
-});
+  expect(selector(STATE)).toMatchSnapshot()
+})
 
 test('first use proxy', () => {
-  const selector = retarget.profile`name.${retarget.last}`;
+  const selector = retarget.profile`name.${retarget.last}`
 
   const STATE = {
     profile: {
@@ -25,7 +25,7 @@ test('first use proxy', () => {
         last: 'Jennings'
       }
     }
-  };
+  }
 
-  expect(selector(STATE)).toMatchSnapshot();
-});
+  expect(selector(STATE)).toMatchSnapshot()
+})
