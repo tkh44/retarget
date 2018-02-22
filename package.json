@@ -90,8 +90,5 @@
     "transform": {
       "^.+\\.js?$": "babel-jest"
     }
-  },
-  "dependencies": {
-    "setimmediate": "^1.0.5"
   }
 }
