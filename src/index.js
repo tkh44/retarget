@@ -24,7 +24,7 @@ const handleInterpolation = interpolation => {
   }
 };
 
-const interleave = (strings, ...exprs) => {
+const interleave = (strings, exprs) => {
   return strings.reduce((accum, s, i) => {
     return accum.concat(
       s.split('.'),
@@ -33,44 +33,45 @@ const interleave = (strings, ...exprs) => {
   }, []);
 };
 
-const createInstance = path => {
-  const fn = (param, ...exprs) => {
-    // Is this called like a tagged template
+const createInstance = (path, handler) => {
+  const instance = (param, ...exprs) => {
+    // Handle template strings after using proxy syntax
     if (param && Array.isArray(param) && exprs && Array.isArray(exprs)) {
-      const woven = interleave(param, ...exprs);
-      return new Proxy(
-        createInstance(fn.path.concat(woven.filter(Boolean))),
-        retargetHandler
+      instance.path = instance.path.concat(
+        interleave(param, exprs).filter(Boolean)
       );
+      return instance.proxy;
     }
 
     // This allows for retarget.a.b(retarget.c) => retarget.a.b.c
     if (param && param[PATH_PROP]) {
-      return new Proxy(
-        createInstance(fn.path.concat(param[PATH_PROP])),
-        retargetHandler
-      );
+      instance.path = instance.path.concat(param[PATH_PROP]);
+      return instance.proxy;
     }
-    return fn.path.reduce((last, part) => last && last[part], param);
+
+    return instance.path.reduce((last, part) => last && last[part], param);
   };
 
-  fn.toString = () => fn.path.join('.');
-  fn.path = path;
-  return fn;
+  instance.toString = () => instance.path.join('.');
+  instance.path = path;
+
+  instance.proxy = new Proxy(instance, handler);
+
+  return instance.proxy;
 };
 
 // Handler for each retarget instance
 const retargetHandler = {
-  get(target, prop, reciever) {
+  get(instance, prop, reciever) {
     // makes it possible to access path
     // without preventing retarget.path.a.b
     if (prop === PATH_PROP) {
-      return target.path;
+      return instance.path;
     }
 
     // retarget.a.b.toString() => "a.b"
     if (prop === 'toString' || prop === Symbol.toPrimitive) {
-      return target.toString;
+      return instance.toString;
     }
 
     // There are two cases here
@@ -81,20 +82,30 @@ const retargetHandler = {
     //    obj[retarget.a.b.c]
     //
     if (prop.indexOf('.') === -1) {
-      target.path.push(prop);
+      instance.path.push(prop);
     } else {
-      target.path = target.path.concat(toPath(prop));
+      instance.path = instance.path.concat(toPath(prop));
     }
 
     return reciever;
   }
 };
 
-// Create retarget instances
-const retargetCreator = {
-  get(target, prop) {
-    return new Proxy(createInstance(toPath(prop)), retargetHandler);
+const rootInstance = (strings, ...args) => {
+  // Handle tagged template literal on the root element
+  if (strings && Array.isArray(strings) && args && Array.isArray(args)) {
+    return createInstance(
+      interleave(strings, args).filter(Boolean),
+      retargetHandler
+    );
+  } else {
+    return strings;
   }
 };
 
-export default new Proxy(createInstance([]), retargetCreator);
+// Always create a new instance for a new retarget usage.
+export default new Proxy(rootInstance, {
+  get(target, prop) {
+    return createInstance(toPath(prop), retargetHandler);
+  }
+});
