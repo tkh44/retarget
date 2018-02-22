@@ -1,5 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`first use proxy tag than tagged template 1`] = `"Jennings"`;
+exports[`first use proxy 1`] = `"Jennings"`;
 
-exports[`first using tagged template 1`] = `"Jennings"`;
+exports[`first use tagged template 1`] = `"Jennings"`;
