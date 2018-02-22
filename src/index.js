@@ -1,37 +1,34 @@
 // Access the path prop from the proxy
-const PATH_PROP = Symbol('PATH');
+const PATH_PROP = Symbol('PATH')
 
 const toPath = prop => {
-  return prop.split('.');
-};
+  return prop.split('.')
+}
 
 const handleInterpolation = interpolation => {
   switch (typeof interpolation) {
     case 'boolean':
-      return '';
+      return ''
     case 'function':
       if (interpolation[PATH_PROP]) {
-        return interpolation[PATH_PROP];
+        return interpolation[PATH_PROP]
       }
-      return interpolation.call(this);
+      return interpolation.call(this)
     case 'object':
       if (Array.isArray(interpolation)) {
-        return interpolation;
+        return interpolation
       }
-      return interpolation.toString();
+      return interpolation.toString()
     default:
-      return interpolation;
+      return interpolation
   }
-};
+}
 
 const interleave = (strings, exprs) => {
   return strings.reduce((accum, s, i) => {
-    return accum.concat(
-      s.split('.'),
-      exprs[i] && handleInterpolation(exprs[i])
-    );
-  }, []);
-};
+    return accum.concat(s.split('.'), exprs[i] && handleInterpolation(exprs[i]))
+  }, [])
+}
 
 const createInstance = (path, handler) => {
   const instance = (param, ...exprs) => {
@@ -39,26 +36,26 @@ const createInstance = (path, handler) => {
     if (param && Array.isArray(param) && exprs && Array.isArray(exprs)) {
       instance.path = instance.path.concat(
         interleave(param, exprs).filter(Boolean)
-      );
-      return instance.proxy;
+      )
+      return instance.proxy
     }
 
     // This allows for retarget.a.b(retarget.c) => retarget.a.b.c
     if (param && param[PATH_PROP]) {
-      instance.path = instance.path.concat(param[PATH_PROP]);
-      return instance.proxy;
+      instance.path = instance.path.concat(param[PATH_PROP])
+      return instance.proxy
     }
 
-    return instance.path.reduce((last, part) => last && last[part], param);
-  };
+    return instance.path.reduce((last, part) => last && last[part], param)
+  }
 
-  instance.toString = () => instance.path.join('.');
-  instance.path = path;
+  instance.toString = () => instance.path.join('.')
+  instance.path = path
 
-  instance.proxy = new Proxy(instance, handler);
+  instance.proxy = new Proxy(instance, handler)
 
-  return instance.proxy;
-};
+  return instance.proxy
+}
 
 // Handler for each retarget instance
 const retargetHandler = {
@@ -66,12 +63,12 @@ const retargetHandler = {
     // makes it possible to access path
     // without preventing retarget.path.a.b
     if (prop === PATH_PROP) {
-      return instance.path;
+      return instance.path
     }
 
     // retarget.a.b.toString() => "a.b"
     if (prop === 'toString' || prop === Symbol.toPrimitive) {
-      return instance.toString;
+      return instance.toString
     }
 
     // There are two cases here
@@ -82,14 +79,14 @@ const retargetHandler = {
     //    obj[retarget.a.b.c]
     //
     if (prop.indexOf('.') === -1) {
-      instance.path.push(prop);
+      instance.path.push(prop)
     } else {
-      instance.path = instance.path.concat(toPath(prop));
+      instance.path = instance.path.concat(toPath(prop))
     }
 
-    return reciever;
+    return reciever
   }
-};
+}
 
 const rootInstance = (strings, ...args) => {
   // Handle tagged template literal on the root element
@@ -97,15 +94,15 @@ const rootInstance = (strings, ...args) => {
     return createInstance(
       interleave(strings, args).filter(Boolean),
       retargetHandler
-    );
+    )
   } else {
-    return strings;
+    return strings
   }
-};
+}
 
 // Always create a new instance for a new retarget usage.
 export default new Proxy(rootInstance, {
   get(target, prop) {
-    return createInstance(toPath(prop), retargetHandler);
+    return createInstance(toPath(prop), retargetHandler)
   }
-});
+})
