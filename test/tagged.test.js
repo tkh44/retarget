@@ -111,3 +111,11 @@ test('handle object', () => {
   }}.c`
   expect(selector.toString()).toEqual('a.b.c')
 })
+
+test('allow array as path', () => {
+  expect(retarget(['a', 'b']).toString()).toEqual('a.b')
+})
+
+test('allow array after tagged template ', () => {
+  expect(retarget`a.b`(['c', 'd']).toString()).toEqual('a.b.c.d')
+})

@@ -88,13 +88,7 @@ test('compound', () => {
       }
     }
   }
-  // I can't figure out how to dedupe selectors
-  // If you use the 2 above one after the other you will get ['profile', 'name', 'last'] twice in the key
 
-  // I think going from right to left with the head of the new key array
-  // looking for a match and then overwriting (left to right) from there might work
-  // need to do some sort of check before doing this check as it is stupid innefficent
-  // unless we know there is a hit
   const selectorA = retarget.users[1]
   const selectorB = retarget.profile
   const selectorC = retarget.first
@@ -112,14 +106,11 @@ test('toString', () => {
   expect(retarget.a.b.toString()).toEqual('a.b')
 })
 
-test('compose with props or functions', () => {
+test('compose with props', () => {
   const d = retarget.d
   const bc = retarget.b.c
   const abcdProp = retarget.a[bc][d]
   expect(abcdProp.toString()).toEqual('a.b.c.d')
-
-  const abcdFunc = retarget.a(bc)(d)
-  expect(abcdFunc.toString()).toEqual(abcdProp.toString())
 })
 
 test('prop as dot path', () => {
