@@ -1,5 +1,3 @@
-#### This is experimental. I would only use it if you are comfortable with breaking changes.
-
 [![npm version](https://badge.fury.io/js/retarget.svg)](https://badge.fury.io/js/retarget)
 [![Build Status](https://travis-ci.org/tkh44/retarget.svg?branch=master)](https://travis-ci.org/tkh44/retarget)
 [![codecov](https://codecov.io/gh/tkh44/retarget/branch/master/graph/badge.svg)](https://codecov.io/gh/tkh44/retarget)
