@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`basic 1`] = `"Jennings"`;
+
+exports[`compound 1`] = `"Waylon"`;
+
+exports[`fun fun functions 1`] = `"Jennings"`;
+
+exports[`nested 1`] = `"Jennings"`;

@@ -1,97 +1,106 @@
-// END GOAL:
-// const selector = select`profile.name.last`;
+const reduceObjectUsingPath = (obj, path) =>
+  path.reduce((last, part) => last && last[part], obj)
 
-// function reducer(state, action) {
-//   const lastNameSelector = selector(state);
-//   // getting the value is handy in components and mapStateToProps
-//   let currentVal = lastNameSelector.get();
+// retarget -- proxy
+const toPath = prop => {
+  return prop.split('.')
+}
 
-//   // But I think its more handy for setting
-//   lastNameSelector.set(action.payload);
+const createProxyInstance = path => {
+  const instance = obj => reduceObjectUsingPath(obj, instance.path)
+  instance.toString = () => instance.path.join('.')
+  instance.path = path
+  instance.proxy = new Proxy(instance, proxyHandler)
+  return instance.proxy
+}
 
-//   // if it was an array value
-//   lastNameSelector.push("foo");
-//   let someIndex = action.payload;
-//   lastNameSelector.remove(someIndex);
-
-//   return lastNameSelector.save();
-// }
-
-export default function select(strings, ...exprs) {
-  const woven = strings.raw ? interleave(strings, ...exprs) : strings
-
-  // console.log(woven)
-
-  let key = woven.filter(Boolean)
-
-  // console.log('key', key)
-
-  let INITIAL = Symbol('INITIAL')
-  let oldObj
-  let prev = INITIAL
-
-  function selectorFn(obj) {
-    // console.log('obj', obj, 'key', key)
-    // from dlv https://raw.githubusercontent.com/developit/dlv/master/index.js
-    let p = 0
-
-    if (obj == null) {
-      return obj
+// Handler for each retarget instance
+const proxyHandler = {
+  get(instance, prop, reciever) {
+    // retarget.a.b.toString() => "a.b"
+    if (prop === 'toString' || prop === Symbol.toPrimitive) {
+      return instance.toString
+    }
+    // There are two cases here
+    // 1) Prop is just a plain property access like obj.a
+    //    prop will be 'a'
+    // 2) Prop is a string path like a.b.c either because it was acces like
+    //    obj['a.b.c'] or because another retarget coercion via
+    //    obj[retarget.a.b.c]
+    //
+    if (prop.includes('.')) {
+      // 2)
+      instance.path = instance.path.concat(toPath(prop))
+    } else {
+      // 1)
+      instance.path.push(prop)
     }
 
-    if (oldObj === obj && prev !== INITIAL) {
-      // console.log('cache working', prev)
-      return prev
-    }
-    oldObj = obj
-
-    while (obj && p < key.length) {
-      let k = key[p++]
-      let val = obj[k]
-      obj = val
-    }
-    prev = obj
-    return obj
+    return reciever
   }
+}
+// retarget -- tagged template literal
+// Access the path prop from handleInterpolation
+const PATH_PROP = Symbol('PATH')
 
-  selectorFn['__selector'] = function() {
-    // console.log('__selector', key)
-    return key
+const handleInterpolation = interpolation => {
+  switch (typeof interpolation) {
+    case 'boolean':
+      return ''
+    case 'function':
+      if (interpolation[PATH_PROP]) {
+        return interpolation[PATH_PROP]
+      }
+      return interpolation.call(this)
+    case 'object':
+      if (Array.isArray(interpolation)) {
+        return interpolation
+      }
+      return interpolation.toString()
+    default:
+      return interpolation
   }
+}
 
-  function interleave(strings, ...exprs) {
-    // return strings.join()
-    return strings.reduce((accum, s, i) => {
-      // console.log(i, exprs[i]);
+const interleave = (strings, exprs) => {
+  return strings
+    .reduce((accum, s, i) => {
       return accum.concat(
         s.split('.'),
         exprs[i] && handleInterpolation(exprs[i])
       )
     }, [])
-  }
-
-  function handleInterpolation(interpolation) {
-    if (interpolation == null) {
-      return ''
-    }
-
-    switch (typeof interpolation) {
-      case 'boolean':
-        return ''
-      case 'function':
-        if (typeof interpolation['__selector'] === 'function')
-          return interpolation['__selector']()
-
-        return handleInterpolation.call(this)
-      case 'object':
-        if (Array.isArray(interpolation)) {
-          return interpolation.map(handleInterpolation).join('.')
-        }
-        return interpolation.toString()
-      default:
-        return interpolation
-    }
-  }
-
-  return selectorFn
+    .filter(Boolean)
 }
+
+const createSelector = (strings, ...args) => {
+  // allow for identitfy retarget({}) === {};
+  if (!Array.isArray(strings)) return strings
+
+  const instance = (strings, ...args) => {
+    if (Array.isArray(strings)) {
+      instance[PATH_PROP] = instance[PATH_PROP].concat(
+        // Called as retarget`` or retarget([])
+        strings.raw ? interleave(strings, args) : strings
+      )
+      return instance
+    } else {
+      // Called as retarget() or retarget({})
+      return reduceObjectUsingPath(strings, instance[PATH_PROP])
+    }
+  }
+  // Ensures that retarget`a.b.c`.toString() evaluates to 'a.b.c'
+  instance.toString = () => instance[PATH_PROP].join('.')
+  instance[PATH_PROP] = strings.raw ? interleave(strings, args) : strings
+  return instance
+}
+
+const hasProxySupport = typeof Proxy !== 'undefined'
+
+export default (hasProxySupport
+  ? new Proxy(createSelector, {
+      get(target, prop) {
+        return createProxyInstance(toPath(prop))
+      }
+    })
+  : createSelector)
